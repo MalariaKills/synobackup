@@ -6,7 +6,6 @@ use std::path::PathBuf;
 fn copy_folder(
     source: &PathBuf,
     destination: &PathBuf,
-    root: &PathBuf,
 ) -> Result<(), Box<dyn std::error::Error>> {
     for entry in read_dir(source)? {
         let entry = entry?;
@@ -27,7 +26,7 @@ fn copy_folder(
         } else if source_path.is_dir() {
             fs::create_dir_all(&destination_path)?;
             println!("Created Directory: {:?}", destination_path);
-            copy_folder(&source_path, &destination_path, root)?;
+            copy_folder(&source_path, &destination_path)?;
         }
     }
     Ok(())
@@ -37,18 +36,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let root = PathBuf::from("/home/marcus/Documents/rust_test");
     let destination = PathBuf::from("/home/marcus/Desktop");
 
-    for entry in read_dir(&root)? {
-        let entry = entry?;
-        let path = entry.path();
-
-        if path.is_dir() {
-            let folder_name = entry.file_name();
-            let dest_path = destination.join(&folder_name);
-            fs::create_dir_all(&dest_path)?;
-
-            copy_folder(&path, &dest_path, &path)?;
-        }
-    }
+    copy_folder(&root, &destination)?;
+        
 
     Ok(())
 }
