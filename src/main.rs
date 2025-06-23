@@ -24,7 +24,7 @@ fn copy_folder(source: &Path, destination: &Path) -> Result<(), io::Error> {
             // Recursive call for nested directories — much simpler than my original version
             copy_folder(&entry_path, &to_path)?;
         } else if entry.file_type()?.is_file() {
-            // Only copy actual files — we skip symlinks etc.
+            // Only copy actual files — we skip symlinks and we compare metadata size - skipping files if the size hasn't changed.
             let should_copy = match fs::metadata(&to_path) {
                 Ok(dest_meta) => {
                     let src_meta = fs::metadata(&entry_path)?;
