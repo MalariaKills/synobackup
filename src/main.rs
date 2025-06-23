@@ -25,8 +25,20 @@ fn copy_folder(source: &Path, destination: &Path) -> Result<(), io::Error> {
             copy_folder(&entry_path, &to_path)?;
         } else if entry.file_type()?.is_file() {
             // Only copy actual files — we skip symlinks etc.
-            fs::copy(&entry_path, &to_path)?;
-            println!("Copied file: {:?} -> {:?}", entry_path, to_path);
+            let should_copy = match fs::metadata(&to_path) {
+                Ok(dest_meta) => {
+                    let src_meta = fs::metadata(&entry_path)?;
+                    src_meta.len() != dest_meta.len()
+                }
+                Err(_) => true, // Destination file doesn't exist — definitely copy it
+            };
+
+            if should_copy {
+                fs::copy(&entry_path, &to_path)?;
+                println!("Copied file: {:?} -> {:?}", entry_path, to_path);
+            } else {
+                println!("Skipped (no changes): {:?}", entry_path);
+            }
         }
     }
 
