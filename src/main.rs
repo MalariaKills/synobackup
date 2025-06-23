@@ -1,43 +1,47 @@
 use std::fs;
-use std::fs::read_dir;
-use std::path::PathBuf;
+use std::io;
+use std::path::{Path, PathBuf};
 
-//helper function - this function will be called inside main to actually walk through and copy all of the files inside each dir
-fn copy_folder(
-    source: &PathBuf,
-    destination: &PathBuf,
-) -> Result<(), Box<dyn std::error::Error>> {
-    for entry in read_dir(source)? {
+// Cleaned-up recursive copy function that works for any folder
+fn copy_folder(source: &Path, destination: &Path) -> Result<(), io::Error> {
+    if !source.exists() {
+        println!("Source path {:?} doesn't exist, skipping.", source);
+        return Ok(());
+    }
+
+    if !destination.exists() {
+        // Instead of just hoping the parent dir exists, we create everything needed
+        fs::create_dir_all(destination)?;
+        println!("Created target directory: {:?}", destination);
+    }
+
+    for entry in fs::read_dir(source)? {
         let entry = entry?;
-        let source_path = entry.path();
+        let entry_path = entry.path();
+        let to_path = destination.join(entry.file_name());
 
-        let relative_path = source_path.strip_prefix(source)?;
-        let destination_path = destination.join(relative_path);
-
-        if source_path.is_file() {
-            if let Some(parent) = destination_path.parent() {
-                fs::create_dir_all(parent)?;
-            }
-            fs::copy(&source_path, &destination_path)?;
-            println!(
-                "File copied successfully from {:?} to {:?}",
-                source_path, destination_path
-            );
-        } else if source_path.is_dir() {
-            fs::create_dir_all(&destination_path)?;
-            println!("Created Directory: {:?}", destination_path);
-            copy_folder(&source_path, &destination_path)?;
+        if entry.file_type()?.is_dir() {
+            // Recursive call for nested directories — much simpler than my original version
+            copy_folder(&entry_path, &to_path)?;
+        } else if entry.file_type()?.is_file() {
+            // Only copy actual files — we skip symlinks etc.
+            fs::copy(&entry_path, &to_path)?;
+            println!("Copied file: {:?} -> {:?}", entry_path, to_path);
         }
     }
+
     Ok(())
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let root = PathBuf::from("/home/marcus/Documents/rust_test");
-    let destination = PathBuf::from("/home/marcus/Desktop");
+fn main() -> Result<(), io::Error> {
+    // Source folder to copy
+    let source_path = PathBuf::from("/home/marcus/Documents/rust_test");
 
-    copy_folder(&root, &destination)?;
-        
+    // Destination where folder should be replicated
+    let destination_path = PathBuf::from("/home/marcus/Desktop");
+
+    // Perform the folder copy
+    copy_folder(&source_path, &destination_path)?;
 
     Ok(())
 }
